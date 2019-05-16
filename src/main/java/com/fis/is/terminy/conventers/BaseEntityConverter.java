@@ -1,4 +1,4 @@
-package com.fis.is.terminy.services;
+package com.fis.is.terminy.conventers;
 
 import com.fis.is.terminy.models.BaseEntity;
 import com.fis.is.terminy.models.Client;
@@ -6,36 +6,27 @@ import com.fis.is.terminy.models.Company;
 import com.fis.is.terminy.repositories.ClientRepository;
 import com.fis.is.terminy.repositories.CompanyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-import javax.transaction.Transactional;
 import java.util.Collection;
 import java.util.Optional;
 
-@Service
-@Transactional
-public class CustomUserDetailsService implements UserDetailsService {
-
+@Component
+public class BaseEntityConverter implements Converter<String, BaseEntity> {
     @Autowired
     private ClientRepository clientRepository;
 
     @Autowired
     private CompanyRepository companyRepository;
 
-
     @Override
-    //TODO
-    public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
-        //Client one = clientRepository.getOne(1L);
-        //Client one = optionalClient.get();
-
+    public BaseEntity convert(String s) {
         BaseEntity logged;
-        Optional<Client> optionalClient = clientRepository.findByLogin(login);
-        Optional<Company> optionalCompany = companyRepository.findByLogin(login);
+        Optional<Client> optionalClient = clientRepository.findById(new Long(s));
+        Optional<Company> optionalCompany = companyRepository.findById(new Long(s));
 
         if (optionalClient.isPresent()) {
             logged = optionalClient.get();
@@ -44,10 +35,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         } else{
             throw new UsernameNotFoundException("Login not found");
         }
-
-        //TODO
-        String forceEagerFetch = logged.getUsername();
-        Collection<? extends GrantedAuthority> grantedAuthorities = logged.getAuthorities();
 
         return logged;
     }

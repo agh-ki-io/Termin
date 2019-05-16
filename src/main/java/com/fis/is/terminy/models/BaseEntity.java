@@ -1,5 +1,6 @@
 package com.fis.is.terminy.models;
 
+import com.fis.is.terminy.validation.annotations.UniqueLoginCheck;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -16,11 +17,12 @@ public abstract class BaseEntity implements UserDetails {
     private long id;
 
     @Column(unique = true)
-    @NotBlank(message = "NB")
+    @NotBlank(message = "Uzupełnij pole")
+    @UniqueLoginCheck(message = "użytkownik o takim loginie istnieje")
     private String login;
 
     @Column
-    @NotBlank(message = "NB")
+    @NotBlank(message = "Uzupełnij pole")
     private String password;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, targetEntity = Privilege.class)
@@ -90,4 +92,24 @@ public abstract class BaseEntity implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return grantedPrivileges;
     }
+
+    @Override
+    public int hashCode(){
+        return Long.hashCode(id);
+    }
+
+    @Override
+    public boolean equals(Object o){
+        if(this == o) return true;
+        if(o == null) return false;
+        if(o.getClass() != getClass()) return false;
+        BaseEntity other = (BaseEntity)o;
+
+        return other.getId() == id;
+    }
+
+    /**
+     * marker interface used to limit validation while editing user
+     */
+    public interface editEntity{}
 }

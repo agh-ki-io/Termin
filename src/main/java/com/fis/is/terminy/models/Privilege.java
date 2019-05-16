@@ -14,11 +14,13 @@ public class Privilege implements GrantedAuthority {
     @Column
     private String privilege;
 
-    @Column
-    private String description;
-
     @Override
     public String getAuthority() {
+        return privilege;
+    }
+
+    @Override
+    public String toString(){
         return privilege;
     }
 
@@ -36,13 +38,5 @@ public class Privilege implements GrantedAuthority {
 
     public void setPrivilege(String privilege) {
         this.privilege = privilege;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 }

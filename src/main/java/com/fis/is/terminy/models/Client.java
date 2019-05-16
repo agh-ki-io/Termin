@@ -1,27 +1,31 @@
 package com.fis.is.terminy.models;
 
+import com.fis.is.terminy.validation.annotations.UniqueEmailCheck;
+
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
+import javax.validation.groups.Default;
 
 @Entity
 public class Client extends BaseEntity {
     @Column
-    @NotBlank(message = "NB")
+    @NotBlank(message = "Uzupełnij pole", groups = {editEntity.class, Default.class})
     private String phone;
 
     @Column(unique = true)
-    @NotBlank(message = "NB")
-    @Email
+    @NotBlank(message = "Uzupełnij pole", groups = {editEntity.class, Default.class})
+    @Email(groups = editEntity.class)
+    @UniqueEmailCheck(message = "użytkownik o takim mailu istnieje")
     private String mail;
 
     @Column
-    @NotBlank(message = "NB")
+    @NotBlank(message = "Uzupełnij pole")
     private String name;
 
     @Column
-    @NotBlank(message = "NB")
+    @NotBlank(message = "Uzupełnij pole")
     private String surname;
 
 
