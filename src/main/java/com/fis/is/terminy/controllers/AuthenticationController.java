@@ -1,6 +1,6 @@
 package com.fis.is.terminy.controllers;
 
-import com.fis.is.terminy.models.BaseEntity;
+import com.fis.is.terminy.converters.PrivilegesConverter;
 import com.fis.is.terminy.models.Client;
 import com.fis.is.terminy.models.Company;
 import com.fis.is.terminy.repositories.ClientRepository;
@@ -8,7 +8,6 @@ import com.fis.is.terminy.repositories.CompanyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,11 +17,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.SessionAttributes;
 
-
 import javax.validation.Valid;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 
 @Controller
@@ -49,27 +45,7 @@ public class AuthenticationController {
             return "register";
         }
         clientRepository.saveModifiedClient(client);
-        return "redirect:/login";
-    }
-
-    @GetMapping("/login")
-    public String login(Model model){
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        if(!(auth instanceof AnonymousAuthenticationToken)) {
-            Collection<String> privileges = convertAuthoritiesToPrivilegesList(auth.getAuthorities());
-            if(privileges.contains("USER")){
-                return "redirect:/user";
-            } else if(privileges.contains("COMPANY")){
-                return "redirect:/company";
-            }
-        }
-
-        Client client = new Client();
-        model.addAttribute("client", client);
-        model.addAttribute("company", new Company());
-
-        return "login";
+        return "redirect:/terminyHome";
     }
 
     @GetMapping(value = "/login/{codedCompany}")
@@ -77,9 +53,9 @@ public class AuthenticationController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if(!(auth instanceof AnonymousAuthenticationToken)) {
-            Collection<String> privileges = convertAuthoritiesToPrivilegesList(auth.getAuthorities());
+            Collection<String> privileges = PrivilegesConverter.convertAuthoritiesToPrivilegesList(auth.getAuthorities());
             if(privileges.contains("USER")){
-                return "redirect:/user";
+                return "redirect:/user/clientReservations";
             } else if(privileges.contains("COMPANY")){
                 return "redirect:/company";
             }
@@ -93,19 +69,9 @@ public class AuthenticationController {
             Company company = optionalCompany.get();
             model.addAttribute("company", company);
         } else {
-            model.addAttribute("company", new Company());
+            throw new IllegalArgumentException("Brak firmy w bazie danych");
         }
 
         return "login";
-    }
-
-    private Collection<String> convertAuthoritiesToPrivilegesList(Collection<? extends GrantedAuthority> authorities){
-        List<String> privileges = new ArrayList<>();
-        if(authorities != null){
-            for(GrantedAuthority authority : authorities){
-                privileges.add(authority.toString());
-            }
-        }
-        return privileges;
     }
 }

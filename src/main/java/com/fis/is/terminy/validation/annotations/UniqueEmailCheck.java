@@ -1,6 +1,5 @@
 package com.fis.is.terminy.validation.annotations;
 
-
 import com.fis.is.terminy.validation.validators.UniqueEmailValidator;
 
 import javax.validation.Constraint;

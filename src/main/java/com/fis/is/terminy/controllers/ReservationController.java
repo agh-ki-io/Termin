@@ -1,8 +1,13 @@
 package com.fis.is.terminy.controllers;
 
+import com.fis.is.terminy.converters.PrivilegesConverter;
+import com.fis.is.terminy.notifications.CalendarEventCreator;
 import com.fis.is.terminy.models.*;
+import com.fis.is.terminy.notifications.EmailContent;
+import com.fis.is.terminy.notifications.EmailService;
 import com.fis.is.terminy.repositories.CompanyScheduleRepository;
 import com.fis.is.terminy.repositories.CompanyServiceRepository;
+import com.fis.is.terminy.repositories.CompanyWorkplaceRepository;
 import com.fis.is.terminy.repositories.ReservationsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -11,13 +16,17 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.SessionAttribute;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.validation.Valid;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,10 +39,16 @@ public class ReservationController {
     private CompanyServiceRepository companyServiceRepository;
     @Autowired
     private CompanyScheduleRepository companyScheduleRepository;
+    @Autowired
+    private CompanyWorkplaceRepository companyWorkplaceRepository;
+
+    @Autowired
+    private EmailService emailService;
 
 
     private Long serviceId;
     private Company company;
+    private CompanyWorkplace companyWorkplace;
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate date;
@@ -56,47 +71,96 @@ public class ReservationController {
     }
 
     @GetMapping("user/reservation")
-    public String getDate(@Valid Calendar calendar)
+    public String getDate(@Valid Calendar calendar, Model model)
     {
+        List<CompanyWorkplace> companyWorkplaceList = companyWorkplaceRepository.findAllByCompanyId(company.getId());
+        model.addAttribute("workplaceList", companyWorkplaceList);
         return "reservation";
     }
 
     @GetMapping("user/reservation/add/{id}")
-    public String saveReservation(@PathVariable(value = "id") int id)
+    public String saveReservation(@PathVariable(value = "id") int id, RedirectAttributes redirectAttributes)
     {
         Client currentClient = (Client) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Reservations reservationToSave = prepareReservation(id, currentClient);
 
-        Reservations reservationsToSave = new Reservations();
-        reservationsToSave.setClient(currentClient);
-        reservationsToSave.setCompany(company);
-        reservationsToSave.setService(companyServiceRepository.findByIdAndCompanyId(serviceId,company.getId()).get());
-        reservationsToSave.setDate(date);
-        reservationsToSave.setStart_hour(reservationUnits.get(id).getStart_hour());
-        reservationsToSave.setEnd_hour(reservationUnits.get(id).getEnd_hour());
+        if(date.isBefore(LocalDate.now()))
+        {
+            return "redirect:/user/reservation?badTerm=true";
+        }
+        else if(date.equals(LocalDate.now()) && LocalTime.now().isAfter(reservationUnits.get(id).getStart_hour()))
+        {
+            return "redirect:/user/reservation?badterm=true";
+        }
 
         try
         {
             if(company.getBlockedUsers().contains(currentClient)){
                 return "redirect:/user/reservation?notallowed=true";
             }
-            reservationsRepository.save(reservationsToSave);
+            reservationsRepository.save(reservationToSave);
         }
         catch (DataIntegrityViolationException e)
         {
             return "redirect:/user/reservation?notsaved=true";
         }
 
+        setConfirmation(redirectAttributes, reservationToSave);
+        notifyUsers(redirectAttributes, currentClient, reservationToSave);
+
         return "redirect:/user";
+    }
+
+    private void setConfirmation(RedirectAttributes redirectAttributes, Reservations reservationToSave) {
+        String confirmation = String.format("%s - %s, %s", reservationToSave.getService().getName(),
+                reservationToSave.getDate(), reservationToSave.getStart_hour());
+        redirectAttributes.addFlashAttribute("confirmation", confirmation);
+    }
+
+    private void notifyUsers(RedirectAttributes redirectAttributes, Client currentClient, Reservations reservationToSave) {
+        EmailContent companyMailContent = new EmailContent().setSubject("Nowa rezerwacja")
+                .addCompanyReservationBasicContent(reservationToSave, currentClient);
+        EmailContent clientMailContent = new EmailContent().setSubject("Poprawnie zarezerwowano termin")
+                .addClientReservationBasicContent(reservationToSave, company);
+
+        Collection<String> privileges = PrivilegesConverter.convertAuthoritiesToPrivilegesList(company.getAuthorities());
+        if(privileges.contains("MAIL_NOTIFICATION")) {
+            String eventHtmlLink = CalendarEventCreator.createEventHtmlLink(reservationToSave, company);
+            if (!eventHtmlLink.isEmpty()) {
+                redirectAttributes.addFlashAttribute("googleEventLink", eventHtmlLink);
+                companyMailContent.addGCalendar(eventHtmlLink);
+                clientMailContent.addGCalendar(eventHtmlLink);
+            }
+        }
+
+        try {
+            emailService.send(company.getMail(), companyMailContent);
+            emailService.send(currentClient.getMail(), clientMailContent);
+        } catch(Exception exception) {
+                System.out.println(exception.getMessage());
+        }
+    }
+
+    private Reservations prepareReservation(int id, Client currentClient) {
+        Reservations reservationToSave = new Reservations();
+        reservationToSave.setClient(currentClient);
+        reservationToSave.setCompanyWorkplace(companyWorkplace);
+        reservationToSave.setService(companyServiceRepository.findByIdAndCompanyId(serviceId,company.getId()).get());
+        reservationToSave.setDate(date);
+        reservationToSave.setStart_hour(reservationUnits.get(id).getStart_hour());
+        reservationToSave.setEnd_hour(reservationUnits.get(id).getEnd_hour());
+        return reservationToSave;
     }
 
     @PostMapping("user/reservation")
     public String printTerms(@Valid Calendar calendar, Model model)
     {
+        companyWorkplace = companyWorkplaceRepository.findById(calendar.getWorkplaceId()).get();
         System.out.println("DATE "  +  calendar.getDate());
         date = calendar.getDate();
         CompanyService companyService = companyServiceRepository.findByIdAndCompanyId(serviceId,company.getId()).get();
-        Optional<CompanySchedule> companyScheduleOptional = companyScheduleRepository.findByCompanyIdAndDay(company.getId(), calendar.getDayName());
-        List<Reservations> reservations = reservationsRepository.findAllByCompanyIdAndDate(company.getId(), date);
+        Optional<CompanySchedule> companyScheduleOptional = companyScheduleRepository.findByCompanyWorkplaceIdAndDay(companyWorkplace.getId(), calendar.getDayName());
+        List<Reservations> reservations = reservationsRepository.findAllByCompanyWorkplaceIdAndDate(companyWorkplace.getId(), date);
 
         if(!companyScheduleOptional.isPresent())
             return "redirect:/user/reservation?error=true";
@@ -107,11 +171,9 @@ public class ReservationController {
 
         reservationUnits = allAvailableReservationUnitList(calendar,reservations, companyService.getDuration());
 
-
-
         model.addAttribute("reservationsList", reservationUnits);
-
-
+        List<CompanyWorkplace> companyWorkplaceList = companyWorkplaceRepository.findAllByCompanyId(company.getId());
+        model.addAttribute("workplaceList", companyWorkplaceList);
         return "reservation";
     }
 
@@ -124,10 +186,10 @@ public class ReservationController {
         LocalTime end = start.plusMinutes(duration);
         int id = 0;
 
-        while(start.isBefore(calendar.getEnd_hour()) || start.equals(calendar.getEnd_hour()))
+        while((start.isBefore(calendar.getEnd_hour()) || start.equals(calendar.getEnd_hour()))  && (end.isBefore(calendar.getEnd_hour()) || end.equals(calendar.getEnd_hour())))
         {
             boolean canBeAdded = true;
-            System.out.println("/t" + id + "/t");
+           // System.out.println("/t" + id + "/t");
             for (Reservations reservation : reservations)
             {
                 if(!canBeReserved(start,end, reservation.getStart_hour(), reservation.getEnd_hour()))

@@ -27,7 +27,7 @@
         </div>
         <div class="collapse navbar-collapse" id="myNavbar">
             <ul class="nav navbar-nav">
-                <li class="active"><a href="/user"><span class="glyphicon glyphicon-list"></span> Home</a></li>
+                <li class="active"><a href="/user/clientReservations"><span class="glyphicon glyphicon-list"></span> Home</a></li>
                 <li><a href="/user/reservationIntro"><span class="glyphicon glyphicon-plus"></span> Zarezerwuj usługę</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
@@ -37,7 +37,16 @@
         </div>
     </div>
 </nav>
-
-<span th:text="'Hello on User home page, ' + ${user}"></span>
+<div>
+    <strong style="font-size: 18px;">Twoja rezerwacja została poprawnie dodana.</strong>
+    <p style="font-size: 16px;" th:text="${confirmation}">...</p>
+</div>
+<div align="center" th:if="${googleEventLink}">
+    <p style="font-size: 16px;"><br>Chcesz otrzymać dodatkowe przypomnienie?<br>
+    Skorzystaj z kalendarza Google i dodaj odpowiednie dla ciebie powiadomienia o wizycie.</p>
+    <a style="background:#737373; border-radius: 5px; padding: 8px 20px; color: #ffffff;
+    display: inline-block; font-size: 16px; text-align: center;" th:href="${googleEventLink}" target="_blank" rel="noopener noreferrer">
+        Dodaj do kalendarza Google</a>
+</div>
 </body>
 </html>

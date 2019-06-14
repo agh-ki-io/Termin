@@ -13,12 +13,12 @@ public class Reservations {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional=false)
-    @JoinColumn(name="company_id", nullable = false)
-    private Company company;
+    @JoinColumn(name="workplace_id", nullable = false)
+    private CompanyWorkplace companyWorkplace;
 
     @ManyToOne(fetch = FetchType.LAZY, optional=false)
     @JoinColumn(name="client_id", nullable = false)
-    private Client client;
+    private BaseEntity client;
 
     @ManyToOne(fetch = FetchType.LAZY, optional=false)
     @JoinColumn(name="service_id", nullable = false)
@@ -29,19 +29,21 @@ public class Reservations {
     private LocalDate date;
 
     @Column
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime start_hour = LocalTime.now();
 
     @Column
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime end_hour = LocalTime.now();
 
     public Long getId() {return id;}
     public void setId(Long id) {this.id = id;}
 
-    public Company getCompany() {return company;}
-    public void setCompany(Company company) {this.company = company;}
+    public CompanyWorkplace getCompanyWorkplace() {return companyWorkplace;}
+    public void setCompanyWorkplace(CompanyWorkplace companyWorkplace) {this.companyWorkplace = companyWorkplace;}
 
-    public Client getClient() {return client;}
-    public void setClient(Client client) {this.client = client;}
+    public BaseEntity getClient() {return client;}
+    public void setClient(BaseEntity client) {this.client = client;}
 
     public CompanyService getService() {return service;}
     public void setService(CompanyService service) {this.service = service;}

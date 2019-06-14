@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Terminy - firma</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
+    <style type="text/css">
+        body{ font: 14px sans-serif; text-align: center; }
+        .wrapper{ width: 350px; padding: 20px; margin:auto; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Terminy</a>
+        </div>
+        <div class="collapse navbar-collapse" id="myNavbar">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="/company"><span class="glyphicon glyphicon-list"></span> Twoja firma</a></li>
+                <li><a href="/company/companySchedule"><span class="glyphicon glyphicon-calendar"></span> Kalendarz</a></li>
+                <li><a href="/company/blockReservation"><span class="glyphicon glyphicon-list-alt"></span> Blokowanie terminów</a></li>
+                <li><a href="/company/companyServices"><span class="glyphicon glyphicon-plus"></span> Usługi</a></li>
+                <li><a href="/company/companyWorkplace"><span class="glyphicon glyphicon-plus"></span> Stanowiska</a></li>
+                <li><a href="/company/blockingUsers"><span class="glyphicon glyphicon-ban-circle"></span> Blokowanie użytkowników</a></li>
+                <li><a href="/company/Report"><span class="glyphicon glyphicon-list-alt"></span> Raporty</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="/company/editCompany"><span class="glyphicon glyphicon-user"></span> Twoje konto</a></li>
+                <li><a href="/logout"><span class="glyphicon glyphicon-log-in"></span> Wyloguj</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<fieldset style="text-align: center;">
+    <div class="alert alert-success" th:if="${param.deleted}">
+        Pomyślnie odwołano termin!
+    </div>
+    <div class="alert alert-danger" th:if="${param.error}">
+        Nie można anulować wybranego terminu!
+    </div>
+</fieldset>
+
+<div style=" width:60%; margin:auto; margin-bottom:15px; border-bottom: 1px solid #e5e5e5;"><h1>Twoje rezerwacje</h1></div>
+
+<div th:if="${reservationsListSize}==0">
+    <div>Brak zarezerwowanych terminów</div>
+</div>
+<div th:unless="${reservationsListSize}==0">
+    <table class="table table-hover" style="width:80%; margin:auto;">
+        <thead>
+        <tr>
+            <th>Data</th>
+            <th>Usługa</th>
+            <th>Stanowisko</th>
+            <th>Klient</th>
+            <th>Dane kontaktowe</th>
+        </tr>
+        </thead>
+        <th:block th:each="reservation : ${reservationsList}">
+            <tr style="text-align: left;">
+                <td th:text="${reservation.date} + ', ' + ${reservation.start_hour}">...</td>
+                <td th:text="${reservation.serviceName}">...</td>
+                <td th:text="${reservation.workplace}">...</td>
+                <td th:text="${reservation.name}+ ' ' + ${reservation.surname}">...</td>
+                <td th:text="${reservation.mail} + ', ' + ${reservation.phone}">...</td>
+                <td>
+                    <form  action="#" th:action="@{/company/delete/__${reservation.id}__}" th:method="delete" >
+                        <input type="hidden" name="_method" value="delete" />
+                        <button type="submit" class="btn btn-link">Odwołaj</button>
+                    </form>
+                </td>
+            </tr>
+        </th:block>
+    </table>
+</div>
+</body>
+</html>
